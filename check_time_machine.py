@@ -38,9 +38,11 @@ then
 fi
 """
 
-from os import path
+import logging
 import argparse
 import yaml
+from datetime import datetime
+from os import path
 from paramiko.client import SSHClient
 
 class TimeMachineFixer(object):
@@ -49,36 +51,46 @@ class TimeMachineFixer(object):
   ssh_connection = None
   configuration = None
 
-  def __init__(self, configuration):
+  def __init__(self, configuration, logger):
     self.configuration = configuration
     self.ssh_connection = SSHClient()
     self.ssh_connection.load_system_host_keys()
     self.ssh_connection.connect(self.configuration['freenas_host'])
+    self.logger = logger
 
   def create_initial_snapshot(self):
     """
     Create snapshot before changing any data
     """
-    self.initial_snapshot = self.configuration['dataset'] + '@time-machine-fixer'
-    stdin, stdout, stderr = self.ssh_connection.exec_command('sudo zfs snapshot -r ' + self.initial_snapshot)
-    for line in stdout.readlines():
-      print line.strip()
-    for line in stderr.readlines():
-      print line.strip()
-    stdin, stdout, stderr = self.ssh_connection.exec_command('ls -1 /mnt/' + self.configuration['dataset'] + '/.zfs/snapshot/')
-    for line in stdout.readlines():
-      print line.strip()
+    self.initial_snapshot = self.configuration['dataset'] + '@time-machine-fixer-' + datetime.now().strftime('%Y%m%d-%H%M%S')
+    self.logger.info('Initial snapshot name: %s', self.initial_snapshot)
+
+    create_snapshot_cmd = 'sudo zfs snapshot -r ' + self.initial_snapshot
+    self.logger.debug('Create snapshot command: %s', create_snapshot_cmd)
+    stdin, stdout, stderr = self.ssh_connection.exec_command(create_snapshot_cmd)
+    self.logger.error("".join(stderr.readlines()))
+    self.logger.info("".join(stdout.readlines()))
+
+    list_snapshots_cmd = 'ls -1 /mnt/' + self.configuration['dataset'] + '/.zfs/snapshot/'
+    self.logger.debug('List snapshots command: %s', list_snapshots_cmd)
+    stdin, stdout, stderr = self.ssh_connection.exec_command(list_snapshots_cmd)
+    self.logger.debug(",".join([x.strip() for x in stdout.readlines()]))
+    
 
   def destroy_initial_snapshot(self):
     """
     Go back to the state before start of fixing process
     """
-    stdin, stdout, stderr = self.ssh_connection.exec_command('sudo zfs destroy -r ' + self.initial_snapshot)
-    for line in stdout.readlines():
-      print line.strip()
-    stdin, stdout, stderr = self.ssh_connection.exec_command('ls -1 /mnt/' + self.configuration['dataset'] + '/.zfs/snapshot/')
-    for line in stdout.readlines():
-      print line.strip()
+    destroy_snapshot_cmd = 'sudo zfs destroy -r ' + self.initial_snapshot
+    self.logger.debug('Destroy snapshot command: %s', destroy_snapshot_cmd)
+    stdin, stdout, stderr = self.ssh_connection.exec_command(destroy_snapshot_cmd)
+    self.logger.error("".join(stderr.readlines()))
+    self.logger.info("".join(stdout.readlines()))
+
+    list_snapshots_cmd = 'ls -1 /mnt/' + self.configuration['dataset'] + '/.zfs/snapshot/'
+    self.logger.debug('List snapshots command: %s', list_snapshots_cmd)
+    stdin, stdout, stderr = self.ssh_connection.exec_command(list_snapshots_cmd)
+    self.logger.debug(",".join([x.strip() for x in stdout.readlines()]))
 
 
 def load_configuration(config_file):
@@ -86,12 +98,25 @@ def load_configuration(config_file):
   configuration = yaml.load(config_stream)
   return configuration
 
+def setup_logger(loglevel):
+	numeric_level = getattr(logging, loglevel.upper(), None)
+	if not isinstance(numeric_level, int):
+		raise ValueError('Invalid log level: %s' % loglevel)
+	logging.basicConfig(filename='fix-time-machine.log',format='%(levelname)s: %(asctime)s:%(message)s', datefmt='%b %d %H:%M:%S', level=numeric_level)
+	return logging.getLogger(__name__)
+
 def main():
   parser = argparse.ArgumentParser()
-  parser.add_argument("sparsebundle")
+
+  parser.add_argument("sparsebundle", help='Name of the sparsebundle to fix (without the extension, e.g. "MyMacBook" for MyMacBook.sparsebundle)')
+  parser.add_argument("--loglevel", help='Level of logging (CRITICAL, ERROR, WARNING (default), INFO, DEBUG)', default="WARNING")
+
   args = parser.parse_args()
+
+  logger = setup_logger(args.loglevel)
   configuration = load_configuration(path.expanduser("~") + "/.time-machine-fixer.yml")
-  tmf = TimeMachineFixer(configuration)
+
+  tmf = TimeMachineFixer(configuration, logger)
   tmf.create_initial_snapshot()
   tmf.destroy_initial_snapshot()
 
