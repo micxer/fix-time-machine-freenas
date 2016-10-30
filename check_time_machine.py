@@ -24,7 +24,7 @@ class TimeMachineFixer(object):
         self.logger = logger
         self.__current_datetime = datetime.now()
 
-    def create_initial_snapshot(self):
+    def create_rollback_snapshot(self):
         """
         Create snapshot before changing any data
         """
@@ -37,7 +37,7 @@ class TimeMachineFixer(object):
         self.logger.error("".join(stderr.readlines()))
         self.logger.info("".join(stdout.readlines()))
 
-    def destroy_initial_snapshot(self):
+    def destroy_rollback_snapshot(self):
         """
         Go back to the state before start of fixing process
         """
@@ -87,10 +87,9 @@ def main():
     configuration = load_configuration(path.expanduser("~") + "/.time-machine-fixer.yml")
 
     tmf = TimeMachineFixer(configuration, logger)
-    tmf.create_initial_snapshot()
-    tmf.get_snapshot_list()
-    tmf.destroy_initial_snapshot()
-    tmf.get_snapshot_list()
+    tmf.create_rollback_snapshot()
+#    tmf.destroy_rollback_snapshot()
+#    tmf.get_snapshot_list()
 
 if __name__ == '__main__':
     main()
