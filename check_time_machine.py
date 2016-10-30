@@ -23,23 +23,23 @@ class TimeMachineFixer(object):
     configuration = None
 
     def __init__(self, configuration, logger):
-        self.configuration = configuration
-        self.ssh_connection = SSHClient()
-        self.ssh_connection.load_system_host_keys()
-        self.ssh_connection.connect(self.configuration['freenas_host'])
+        self.__configuration = configuration
+        self.__ssh_connection = SSHClient()
+        self.__ssh_connection.load_system_host_keys()
+        self.__ssh_connection.connect(self.__configuration['freenas_host'])
         self.logger = logger
-        self.current_datetime = datetime.now()
+        self.__current_datetime = datetime.now()
 
     def create_initial_snapshot(self):
         """
         Create snapshot before changing any data
         """
-        self.initial_snapshot = self.configuration['dataset'] + '@time-machine-fixer-' + self.current_datetime.strftime('%Y%m%d-%H%M%S')
-        self.logger.info('Initial snapshot name: %s', self.initial_snapshot)
+        self.__initial_snapshot = self.__configuration['dataset'] + '@time-machine-fixer-' + self.__current_datetime.strftime('%Y%m%d-%H%M%S')
+        self.logger.info('Initial snapshot name: %s', self.__initial_snapshot)
 
-        create_snapshot_cmd = 'sudo zfs snapshot -r ' + self.initial_snapshot
+        create_snapshot_cmd = 'sudo zfs snapshot -r ' + self.__initial_snapshot
         self.logger.debug('Create snapshot command: %s', create_snapshot_cmd)
-        stdin, stdout, stderr = self.ssh_connection.exec_command(create_snapshot_cmd)
+        stdin, stdout, stderr = self.__ssh_connection.exec_command(create_snapshot_cmd)
         self.logger.error("".join(stderr.readlines()))
         self.logger.info("".join(stdout.readlines()))
 
@@ -47,9 +47,9 @@ class TimeMachineFixer(object):
         """
         Go back to the state before start of fixing process
         """
-        destroy_snapshot_cmd = 'sudo zfs destroy -r ' + self.initial_snapshot
+        destroy_snapshot_cmd = 'sudo zfs destroy -r ' + self.__initial_snapshot
         self.logger.debug('Destroy snapshot command: %s', destroy_snapshot_cmd)
-        stdin, stdout, stderr = self.ssh_connection.exec_command(destroy_snapshot_cmd)
+        stdin, stdout, stderr = self.__ssh_connection.exec_command(destroy_snapshot_cmd)
         self.logger.error("".join(stderr.readlines()))
         self.logger.info("".join(stdout.readlines()))
 
@@ -57,9 +57,9 @@ class TimeMachineFixer(object):
         """
         Gets a list of snapshots from the dataset on FreeNAS
         """
-        list_snapshots_cmd = 'ls -1 /mnt/' + self.configuration['dataset'] + '/.zfs/snapshot/'
+        list_snapshots_cmd = 'ls -1 /mnt/' + self.__configuration['dataset'] + '/.zfs/snapshot/'
         self.logger.debug('List snapshots command: %s', list_snapshots_cmd)
-        stdin, stdout, stderr = self.ssh_connection.exec_command(list_snapshots_cmd)
+        stdin, stdout, stderr = self.__ssh_connection.exec_command(list_snapshots_cmd)
         snapshot_list = [snapshot.strip() for snapshot in stdout.readlines() if snapshot.startswith('auto-')]
         self.logger.debug(",".join(snapshot_list))
         # auto-20160827.0003-2m
