@@ -54,13 +54,22 @@ class TimeMachineFixer(object):
         list_snapshots_cmd = 'zfs list -r -t snapshot -o name,used {0}'.format(self.__configuration['dataset'])
         self.logger.debug('List snapshots command: %s', list_snapshots_cmd)
         stdin, stdout, stderr = self.__ssh_connection.exec_command(list_snapshots_cmd)
-        snapshot_list = [snapshot.strip() for snapshot in stdout.readlines() if snapshot.startswith('auto-')]
-        self.logger.debug(",".join(snapshot_list))
-        # auto-20160827.0003-2m
-        for snapshot in snapshot_list:
-            self.snapshot_list[datetime.strptime(snapshot.split('-')[1], '%Y%m%d.%H%M')] = snapshot
-        self.logger.debug(self.snapshot_list)
 
+        snapshot_list = []
+        for snapshot in stdout.readlines():
+            snapshot_name, snapshot_size = snapshot.split()
+            if snapshot_size != '0' and '@auto' in snapshot_name:
+                snapshot_list.append(snapshot_name)
+
+        self.logger.debug('Snapshot list: %s', ",".join(snapshot_list))
+
+        # snapshot names like auto-20160827.0003-2m
+        snapshot_dict = {}
+        for snapshot in snapshot_list:
+            snapshot_dict[datetime.strptime(snapshot.split('-')[1], '%Y%m%d.%H%M')] = snapshot
+
+        self.logger.debug(snapshot_dict)
+        return snapshot_dict
 
 
 def load_configuration(config_file):
@@ -88,6 +97,7 @@ def main():
 
     tmf = TimeMachineFixer(configuration, logger)
     tmf.create_rollback_snapshot()
+    snapshots = tmf.get_snapshot_list()
 #    tmf.destroy_rollback_snapshot()
 #    tmf.get_snapshot_list()
 
