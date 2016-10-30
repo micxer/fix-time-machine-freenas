@@ -15,12 +15,6 @@ from os import path
 from paramiko.client import SSHClient
 
 class TimeMachineFixer(object):
-    current_datetime = None
-    initial_snapshot = None
-    current_snapshot = None
-    snapshot_list = {}
-    ssh_connection = None
-    configuration = None
 
     def __init__(self, configuration, logger):
         self.__configuration = configuration
