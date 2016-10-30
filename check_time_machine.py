@@ -28,7 +28,7 @@ class TimeMachineFixer(object):
         """
         Create snapshot before changing any data
         """
-        self.__initial_snapshot = self.__configuration['dataset'] + '@time-machine-fixer-' + self.__current_datetime.strftime('%Y%m%d-%H%M%S')
+        self.__initial_snapshot = self.__configuration['dataset'] + '@time-machine-fixer-rollback-' + self.__current_datetime.strftime('%Y%m%d-%H%M%S')
         self.logger.info('Initial snapshot name: %s', self.__initial_snapshot)
 
         create_snapshot_cmd = 'sudo zfs snapshot -r ' + self.__initial_snapshot
