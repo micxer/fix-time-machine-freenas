@@ -49,9 +49,9 @@ class TimeMachineFixer(object):
 
     def get_snapshot_list(self):
         """
-        Gets a list of snapshots from the dataset on FreeNAS
+        Gets a list of snapshots from the dataset on FreeNAS that have a size diff greater than 0
         """
-        list_snapshots_cmd = 'ls -1 /mnt/' + self.__configuration['dataset'] + '/.zfs/snapshot/'
+        list_snapshots_cmd = 'zfs list -r -t snapshot -o name,used {0}'.format(self.__configuration['dataset'])
         self.logger.debug('List snapshots command: %s', list_snapshots_cmd)
         stdin, stdout, stderr = self.__ssh_connection.exec_command(list_snapshots_cmd)
         snapshot_list = [snapshot.strip() for snapshot in stdout.readlines() if snapshot.startswith('auto-')]
