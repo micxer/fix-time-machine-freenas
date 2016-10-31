@@ -21,7 +21,7 @@ class TimeMachineFixer(object):
         self.__configuration = configuration
         self.__ssh_connection = SSHClient()
         self.__ssh_connection.load_system_host_keys()
-        self.__ssh_connection.connect(self.__configuration['freenas_host'])
+        self.__ssh_connection.connect(self.__configuration['freenas_host'], compress=False)
         self.logger = logger
         self.__sparsebundle = sparsebundle
         self.__current_datetime = datetime.now()
