@@ -151,7 +151,7 @@ def setup_logger(loglevel):
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("sparsebundle", help='Name of the sparsebundle to fix (without the extension, e.g. "MyMacBook" for MyMacBook.sparsebundle)')
+    parser.add_argument("sparsebundle", help='Name of the sparsebundle to fix (without the extension, usually the name of your computer, e.g. "MyMacBook" for MyMacBook.sparsebundle)')
     parser.add_argument("--loglevel", help='Level of logging (CRITICAL, ERROR, WARNING (default), INFO, DEBUG)', default="WARNING")
 
     args = parser.parse_args()
