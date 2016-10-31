@@ -1,2 +1,2 @@
 # fix-time-machine-freenas
-Automatically fix broken TimeMachine backup on FreeNAS AFP share
+Automated fixing of broken TimeMachine backup on a FreeNAS AFP share
