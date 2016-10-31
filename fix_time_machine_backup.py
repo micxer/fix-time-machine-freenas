@@ -40,8 +40,11 @@ class TimeMachineFixer(object):
         """
         Go back to the state before start of fixing process
         """
-        destroy_snapshot_cmd = 'sudo zfs destroy -r ' + self.__initial_snapshot
-        self._run_ssh_command(destroy_snapshot_cmd)
+        if (self.__initial_snapshot):
+            destroy_snapshot_cmd = 'sudo zfs destroy -r ' + self.__initial_snapshot
+            self._run_ssh_command(destroy_snapshot_cmd)
+        else:
+            self.logger.info('No rollback snapshot created, nothing to do')
 
     def get_snapshot_list(self):
         """
