@@ -88,39 +88,30 @@ class TimeMachineFixer(object):
 
     def _mount_sparsebundle(self):
         cmd = 'sudo hdiutil attach -nomount -noverify -noautofsck /Volumes/Time\ Machine/' + self.__sparsebundle + '.sparsebundle'
-        self.logger.info(cmd)
-        labels = subprocess.check_output(cmd, shell=True)
-        self.logger.debug(labels)
+        labels = self._run_local_command(cmd)
         self.__disk = labels.split()[-2]
 
     def _unmount_sparsebundle(self):
         cmd = 'sudo hdiutil detach ' + self.__disk
-        self.logger.info(cmd)
-        output = subprocess.check_output(cmd, shell=True)
-        self.logger.debug(output)
+        output = self._run_local_command(cmd)
         self.__disk = None
 
     def _prepare_sparsebundle(self):
         sparsebundle_path = '/Volumes/Time Machine/' + self.__sparsebundle + '.sparsebundle'
         cmd = 'sudo chflags nouchg "{0}" "{0}/token"'.format(sparsebundle_path)
-        self.logger.info(cmd)
-        output = subprocess.check_output(cmd, shell=True)
-        self.logger.debug(output)
+        output = self._run_local_command(cmd)
 
     def _do_fsck(self):
         fsck_full_check_cmd = 'sudo time fsck_hfs -dfry -c 1g ' + self.__disk
         fsck_prune_cmd = 'sudo time fsck_hfs -p ' + self.__disk
         try:
-            self.logger.info(fsck_full_check_cmd)
-            output = subprocess.check_output(fsck_full_check_cmd, shell=True)
+            output = self._run_local_command(fsck_full_check_cmd)
             self.logger.debug(output)
         except subprocess.CalledProcessError as e:
             self.logger.warning(e.output)
             try:
-                self.logger.info(fsck_prune_cmd)
-                output = subprocess.check_output(fsck_prune_cmd, shell=True)
-                self.logger.info(fsck_full_check_cmd)
-                output = subprocess.check_output(fsck_full_check_cmd, shell=True)
+                self._run_local_command(fsck_prune_cmd)
+                self._run_local_command(fsck_full_check_cmd)
             except subprocess.CalledProcessError as e:
                 self.logger.error(e.output)
                 return False
@@ -136,6 +127,12 @@ class TimeMachineFixer(object):
         self.logger.error("".join(stderr.readlines()))
         self.logger.debug("".join(output))
 
+        return output
+
+    def _run_local_command(self, command):
+        self.logger.info(command)
+        output = subprocess.check_output(command, shell=True)
+        self.logger.debug(output)
         return output
 
 
