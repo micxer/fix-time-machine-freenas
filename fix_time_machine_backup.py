@@ -34,31 +34,26 @@ class TimeMachineFixer(object):
         self.logger.info('Initial snapshot name: %s', self.__initial_snapshot)
 
         create_snapshot_cmd = 'sudo zfs snapshot -r ' + self.__initial_snapshot
-        self.logger.debug('Create snapshot command: %s', create_snapshot_cmd)
-        stdin, stdout, stderr = self.__ssh_connection.exec_command(create_snapshot_cmd)
-        self.logger.error("".join(stderr.readlines()))
-        self.logger.info("".join(stdout.readlines()))
+        self._run_ssh_command(create_snapshot_cmd)
 
     def destroy_rollback_snapshot(self):
         """
         Go back to the state before start of fixing process
         """
         destroy_snapshot_cmd = 'sudo zfs destroy -r ' + self.__initial_snapshot
-        self.logger.debug('Destroy snapshot command: %s', destroy_snapshot_cmd)
-        stdin, stdout, stderr = self.__ssh_connection.exec_command(destroy_snapshot_cmd)
-        self.logger.error("".join(stderr.readlines()))
-        self.logger.info("".join(stdout.readlines()))
+        self._run_ssh_command(destroy_snapshot_cmd)
 
     def get_snapshot_list(self):
         """
         Gets a list of snapshots from the dataset on FreeNAS that have a size diff greater than 0
         """
         list_snapshots_cmd = 'zfs list -r -t snapshot -o name,used {0}'.format(self.__configuration['dataset'])
-        self.logger.debug('List snapshots command: %s', list_snapshots_cmd)
-        stdin, stdout, stderr = self.__ssh_connection.exec_command(list_snapshots_cmd)
+        self.logger.info('List snapshots')
+
+        output = self._run_ssh_command(list_snapshots_cmd)
 
         snapshot_list = []
-        for snapshot in stdout.readlines():
+        for snapshot in output:
             snapshot_name, snapshot_size = snapshot.split()
             if snapshot_size != '0' and '@auto' in snapshot_name:
                 snapshot_list.append(snapshot_name)
@@ -80,10 +75,7 @@ class TimeMachineFixer(object):
             snapshot=snapshot,
             sparsebundle=self.__sparsebundle
         )
-        self.logger.info('FreeNAS: %s', cmd)
-        stdin, stdout, stderr = self.__ssh_connection.exec_command(cmd)
-        self.logger.error("".join(stderr.readlines()))
-        self.logger.debug("".join(stdout.readlines()))
+        self._run_ssh_command(cmd)
 
     def fsck_sparsebundle(self):
         self._prepare_sparsebundle()
@@ -131,6 +123,18 @@ class TimeMachineFixer(object):
                 return False
 
         return True
+
+    def _run_ssh_command(self, command):
+        self.logger.info('SSH command: %s', command)
+
+        stdin, stdout, stderr = self.__ssh_connection.exec_command(command)
+        output = stdout.readlines()
+
+        self.logger.error("".join(stderr.readlines()))
+        self.logger.debug("".join(output))
+
+        return output
+
 
 def load_configuration(config_file):
     config_stream = open(config_file, "r")
