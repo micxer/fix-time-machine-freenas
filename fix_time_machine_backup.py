@@ -10,10 +10,11 @@ fi
 import logging
 import argparse
 import yaml
-from datetime import datetime
+from datetime import datetime, timedelta
 from os import path
 from paramiko.client import SSHClient
 import subprocess
+from collections import OrderedDict
 
 class TimeMachineFixer(object):
 
@@ -134,6 +135,50 @@ class TimeMachineFixer(object):
         output = subprocess.check_output(command, shell=True)
         self.logger.debug(output)
         return output
+
+class SnapshotList(object):
+    """
+    Class to manage the list of snapshots and implement different iterations algorithms
+    """
+    MODE_WEEKLY = 0
+    MODE_BINARY = 1
+
+    def __init__(self, snapshot_list=None):
+        self.__snapshots = None
+        self.__current_snapshot = None
+        self.__lower_bound_snapshot = None
+        self.__upper_bound_snapshot = None
+        self.__mode = self.MODE_WEEKLY
+
+        if (snapshot_list):
+            self.__snapshots = OrderedDict()
+            for snapshot in sorted(snapshot_list, reverse=True):
+                self.__snapshots[datetime.strptime(snapshot.split('-')[1], '%Y%m%d.%H%M')] = snapshot
+
+            self.__current_snapshot = self.__snapshots.keys()[0]
+
+    def get_current_snapshot(self):
+        return self.__snapshots[self.__current_snapshot]
+
+
+    def get_next_snapshot(self):
+        if self.__mode == self.MODE_WEEKLY:
+            current_snapshot_date = self.__current_snapshot
+            target_snapshot_date = (current_snapshot_date - timedelta(weeks=1)).date()
+            print target_snapshot_date
+            for date, value in self.__snapshots.iteritems():
+                print date.date(), target_snapshot_date
+                if date.date() == target_snapshot_date:
+                    current_snapshot_date = date
+                elif date.date() < target_snapshot_date:
+                    break
+
+            self.__current_snapshot = current_snapshot_date
+            return self.__snapshots[self.__current_snapshot]
+
+        # MODE_BINARY
+        else:
+            return self.__snapshots[self.__current_snapshot]
 
 
 def load_configuration(config_file):
