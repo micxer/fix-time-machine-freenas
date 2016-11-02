@@ -18,10 +18,11 @@ import subprocess
 class TimeMachineFixer(object):
 
     def __init__(self, configuration, logger, sparsebundle):
-        self.__configuration = configuration
+        self.__freenas_host = configuration['freenas_host']
+        self.__dataset = configuration['dataset']
         self.__ssh_connection = SSHClient()
         self.__ssh_connection.load_system_host_keys()
-        self.__ssh_connection.connect(self.__configuration['freenas_host'], compress=False)
+        self.__ssh_connection.connect(self.__freenas_host, compress=False)
         self.logger = logger
         self.__sparsebundle = sparsebundle
         self.__current_datetime = datetime.now()
@@ -30,7 +31,7 @@ class TimeMachineFixer(object):
         """
         Create snapshot before changing any data
         """
-        self.__initial_snapshot = self.__configuration['dataset'] + '@time-machine-fixer-rollback-' + self.__current_datetime.strftime('%Y%m%d-%H%M%S')
+        self.__initial_snapshot = self.__dataset + '@time-machine-fixer-rollback-' + self.__current_datetime.strftime('%Y%m%d-%H%M%S')
         self.logger.info('Initial snapshot name: %s', self.__initial_snapshot)
 
         create_snapshot_cmd = 'sudo zfs snapshot -r ' + self.__initial_snapshot
@@ -50,7 +51,7 @@ class TimeMachineFixer(object):
         """
         Gets a list of snapshots from the dataset on FreeNAS that have a size diff greater than 0
         """
-        list_snapshots_cmd = 'zfs list -r -t snapshot -o name,used {0}'.format(self.__configuration['dataset'])
+        list_snapshots_cmd = 'zfs list -r -t snapshot -o name,used {0}'.format(self.__dataset)
         self.logger.info('List snapshots')
 
         output = self._run_ssh_command(list_snapshots_cmd)
@@ -72,9 +73,8 @@ class TimeMachineFixer(object):
         return snapshot_dict
 
     def revert_to_snapshot(self, snapshot):
-        cmd = 'rsync -avPh --delete /{mount_prefix}/{dataset}/.zfs/snapshot/{snapshot}/{sparsebundle}.sparsebundle/ /{mount_prefix}/{dataset}/{sparsebundle}.sparsebundle/'.format(
-            mount_prefix=self.__configuration['mount_prefix'],
-            dataset=self.__configuration['dataset'],
+        cmd = 'rsync -avPh --delete /mnt/{dataset}/.zfs/snapshot/{snapshot}/{sparsebundle}.sparsebundle/ /mnt/{dataset}/{sparsebundle}.sparsebundle/'.format(
+            dataset=self.__dataset,
             snapshot=snapshot,
             sparsebundle=self.__sparsebundle
         )
