@@ -139,6 +139,12 @@ class TimeMachineFixer(object):
 class SnapshotList(object):
     """
     Class to manage the list of snapshots and implement different iterations algorithms
+
+    __snapshots: list of snapshots that this object manages
+    __current_snapshot: snapshot the list is currently pointing to
+    __lower_bound_snapshot: lower bound for binary search
+    __upper_bound_snapshot: upper bound for binary search
+    __mode: which mode the list is operating in
     """
     MODE_WEEKLY = 0
     MODE_BINARY = 1
@@ -156,28 +162,44 @@ class SnapshotList(object):
                 self.__snapshots[datetime.strptime(snapshot.split('-')[1], '%Y%m%d.%H%M')] = snapshot
 
             self.__current_snapshot = self.__snapshots.keys()[0]
+            self.__lower_bound_snapshot = self.__current_snapshot
+            self.__upper_bound_snapshot = self.__lower_bound_snapshot
 
     def get_current_snapshot(self):
         return self.__snapshots[self.__current_snapshot]
 
+    def get_next_snapshot(self, working=False):
+        if self.__mode == self.MODE_WEEKLY and working:
+            self.__mode = self.MODE_BINARY
 
-    def get_next_snapshot(self):
         if self.__mode == self.MODE_WEEKLY:
+            self.__lower_bound_snapshot = self.__upper_bound_snapshot
+
             current_snapshot_date = self.__current_snapshot
             target_snapshot_date = (current_snapshot_date - timedelta(weeks=1)).date()
-            print target_snapshot_date
+
             for date, value in self.__snapshots.iteritems():
-                print date.date(), target_snapshot_date
                 if date.date() == target_snapshot_date:
                     current_snapshot_date = date
                 elif date.date() < target_snapshot_date:
                     break
 
             self.__current_snapshot = current_snapshot_date
+            self.__upper_bound_snapshot = current_snapshot_date
+
             return self.__snapshots[self.__current_snapshot]
 
         # MODE_BINARY
         else:
+            if working:
+                if self.__upper_bound_snapshot != self.__current_snapshot:
+                    self.__upper_bound_snapshot = self.__current_snapshot
+            else:
+                self.__lower_bound_snapshot = self.__current_snapshot
+
+
+            # nächsten
+
             return self.__snapshots[self.__current_snapshot]
 
 
