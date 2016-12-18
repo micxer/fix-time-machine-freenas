@@ -58,3 +58,4 @@ venv/
 ENV/
 
 fix-time-machine.log
+.DS_Store
